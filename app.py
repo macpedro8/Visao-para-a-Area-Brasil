@@ -1,9 +1,14 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="Visão para a Área Brasil", layout="wide")
+# Configuração da Página
+st.set_page_config(
+    page_title="Visão para a Área Brasil",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-# CSS personalizado para mesclar e estender as caixas de Responsabilidade
+# Estilização CSS Customizada
 st.markdown("""
 <style>
     .stApp {
@@ -19,7 +24,7 @@ st.markdown("""
         margin-bottom: 20px;
     }
     
-    /* Agrupador da Responsabilidade (Altura exata para bater com 2 linhas + margem) */
+    /* Agrupador da Responsabilidade */
     .pillar-box-merged {
         background-color: #0d1e30;
         border-radius: 6px;
@@ -28,13 +33,13 @@ st.markdown("""
         font-size: 13px;
         text-align: center;
         border: 1px solid #1a334e;
-        height: 94px; /* Altura exata: 2x caixas de 44px + 6px de margem */
+        height: 94px;
         display: flex;
         align-items: center;
         justify-content: center;
         line-height: 1.3;
         box-sizing: border-box;
-        margin-bottom: 12px; /* Margem entre blocos de responsabilidades */
+        margin-bottom: 12px;
     }
     
     .p-viver { color: #8bc34a; border-left: 5px solid #8bc34a; }
@@ -54,7 +59,7 @@ st.markdown("""
         letter-spacing: 1px;
     }
     
-    /* Linha do Tópico com Altura Fixa */
+    /* Linha do Tópico */
     .topic-row {
         background-color: #0d1e30;
         padding: 0 15px;
@@ -66,7 +71,7 @@ st.markdown("""
         display: flex;
         align-items: center;
         margin-bottom: 6px;
-        box-sizing: border-radius;
+        box-sizing: border-box;
     }
     
     /* Caixas de Valores com Altura Fixa */
@@ -83,6 +88,21 @@ st.markdown("""
         margin-bottom: 6px;
         box-sizing: border-box;
     }
+
+    /* Destaque para a coluna Falta */
+    .val-box-falta {
+        background-color: #1a2332;
+        color: #ff8a80;
+        text-align: center;
+        height: 44px;
+        line-height: 44px;
+        border-radius: 4px;
+        font-size: 17px;
+        font-weight: bold;
+        border: 1px solid #3c242e;
+        margin-bottom: 6px;
+        box-sizing: border-box;
+    }
     
     .footer-quote {
         text-align: center;
@@ -94,106 +114,132 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Função para carregar os dados do Excel
 @st.cache_data
 def carregar_dados():
-    return pd.read_excel('DADOS.xlsx', sheet_name='2026')
+    try:
+        # Lê todas as abas caso haja mais de um ano
+        xls = pd.ExcelFile("DADOS.xlsx")
+        dfs = []
+        for sheet_name in xls.sheet_names:
+            dfs.append(pd.read_excel(xls, sheet_name=sheet_name))
+        df = pd.concat(dfs, ignore_index=True)
+        return df
+    except Exception as e:
+        st.error(f"Erro ao carregar o arquivo DADOS.xlsx: {e}")
+        return pd.DataFrame()
 
-df = pd.read_excel('DADOS.xlsx', sheet_name='2026')
+df = carregar_dados()
 
-# --- TOPO: TÍTULO E FILTROS ---
+# Título Principal
 st.markdown("<p class='main-title'>VISÃO PARA A ÁREA BRASIL - ESTACA MACEIÓ BRASIL LITORAL</p>", unsafe_allow_html=True)
 
-c_ano, c_unid = st.columns([1, 4])
-
-with c_ano:
-    st.caption("**ANO**")
-    anos = sorted(df['ANO'].unique())
-    ano_sel = st.segmented_control("Ano", anos, default=anos[0], label_visibility="collapsed")
-
-with c_unid:
-    st.caption("**UNIDADE**")
-    unidades = sorted(df['UNIDADES'].unique())
-    unid_sel = st.segmented_control("Unidade", unidades, default=unidades[0], label_visibility="collapsed")
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# Filtrar dados
-df_filtrado = df[(df['ANO'] == ano_sel) & (df['UNIDADES'] == unid_sel)]
-
-# --- CABEÇALHO DA TABELA ---
-col_pil, col_top, col_met, col_alc = st.columns([1.3, 3.5, 1, 1])
-
-with col_pil:
-    st.markdown("<div class='grid-header'>RESPONSABILIDADES</div>", unsafe_allow_html=True)
-with col_top:
-    st.markdown("<div class='grid-header' style='text-align:left; padding-left:15px;'>INDICADOR / TÓPICO</div>", unsafe_allow_html=True)
-with col_met:
-    st.markdown("<div class='grid-header'>META</div>", unsafe_allow_html=True)
-with col_alc:
-    st.markdown("<div class='grid-header'>ALCANÇADO</div>", unsafe_allow_html=True)
-
-st.write("")
-
-# Estrutura agrupada por Responsabilidade
-grupos_responsabilidades = [
-    {
-        "pilar": "VIVER O EVANGELHO DE JESUS CRISTO",
-        "classe": "p-viver",
-        "topicos": [
-            {"nome": "Frequência da Reunião Sacramental", "icone": "⛵"},
-            {"nome": "Membros Participantes", "icone": "👥"}
-        ]
-    },
-    {
-        "pilar": "CUIDAR DOS NECESSITADOS",
-        "classe": "p-cuidar",
-        "topicos": [
-            {"nome": "Membros Retornando", "icone": "🤝"},
-            {"nome": "Membros Jejuando", "icone": "🥖"}
-        ]
-    },
-    {
-        "pilar": "CONVIDAR TODOS A RECEBER O EVANGELHO",
-        "classe": "p-convidar",
-        "topicos": [
-            {"nome": "Batismos de Conversos", "icone": "🌊"},
-            {"nome": "Missionários Servindo do Brasil", "icone": "🏙️️"}
-        ]
-    },
-    {
-        "pilar": "UNIR AS FAMÍLIAS POR TODA A ETERNIDADE",
-        "classe": "p-unir",
-        "topicos": [
-            {"nome": "Recomendações para o Templo - Membros com Investidura", "icone": "🏛️"},
-            {"nome": "Recomendações para o Templo - Membros sem Investidura", "icone": "📜"}
-        ]
-    }
-]
-
-# Renderização do Grid Agrupado
-for grupo in grupos_responsabilidades:
-    c_p, c_t, c_m, c_a = st.columns([1.3, 3.5, 1, 1])
+if not df.empty:
+    # Filtros de Seleção (Ano e Unidade)
+    col_f1, col_f2 = st.columns([1, 4])
     
-    # Coluna 1: Responsabilidade Unificada (Uma única caixa centralizada verticalmente)
-    with c_p:
-        st.markdown(f"<div class='pillar-box-merged {grupo['classe']}'>{grupo['pilar']}</div>", unsafe_allow_html=True)
+    with col_f1:
+        st.caption("ANO")
+        anos_disponiveis = sorted(df['ANO'].dropna().unique().astype(int))
+        ano_sel = st.radio("Selecione o Ano", anos_disponiveis, horizontal=True, label_visibility="collapsed")
         
-    # Colunas 2, 3 e 4: Os tópicos e seus valores empilhados
-    with c_t:
-        for t in grupo["topicos"]:
-            st.markdown(f"<div class='topic-row'>{t['icone']}&nbsp;&nbsp;{t['nome']}</div>", unsafe_allow_html=True)
-            
-    with c_m:
-        for t in grupo["topicos"]:
-            dado_topico = df_filtrado[df_filtrado['TOPICO'] == t['nome']]
-            val_meta = dado_topico['V. META'].values[0] if not dado_topico.empty and pd.notna(dado_topico['V. META'].values[0]) else 0
-            st.markdown(f"<div class='val-box'>{int(val_meta):,}</div>".replace(",", "."), unsafe_allow_html=True)
-            
-    with c_a:
-        for t in grupo["topicos"]:
-            dado_topico = df_filtrado[df_filtrado['TOPICO'] == t['nome']]
-            val_real = dado_topico['V. ALCANÇADO'].values[0] if not dado_topico.empty and pd.notna(dado_topico['V. ALCANÇADO'].values[0]) else 0
-            st.markdown(f"<div class='val-box'>{int(val_real):,}</div>".replace(",", "."), unsafe_allow_html=True)
+    with col_f2:
+        st.caption("UNIDADE")
+        unidades_disponiveis = df['UNIDADES'].dropna().unique().tolist()
+        unid_sel = st.radio("Selecione a Unidade", unidades_disponiveis, horizontal=True, label_visibility="collapsed")
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Filtrar dados
+    df_filtrado = df[(df['ANO'] == ano_sel) & (df['UNIDADES'] == unid_sel)]
+    
+    # Definição dos Grupos e Tópicos
+    grupos_responsabilidades = [
+        {
+            "pilar": "VIVER O EVANGELHO DE JESUS CRISTO",
+            "classe": "p-viver",
+            "topicos": [
+                {"nome": "Frequência da Reunião Sacramental", "icone": "⛵"},
+                {"nome": "Membros Participantes", "icone": "👥"}
+            ]
+        },
+        {
+            "pilar": "CUIDAR DOS NECESSITADOS",
+            "classe": "p-cuidar",
+            "topicos": [
+                {"nome": "Membros Retornando", "icone": "🤝"},
+                {"nome": "Membros Jejuando", "icone": "🥖"}
+            ]
+        },
+        {
+            "pilar": "CONVIDAR TODOS A RECEBER O EVANGELHO",
+            "classe": "p-convidar",
+            "topicos": [
+                {"nome": "Batismos de Conversos", "icone": "🌊"},
+                {"nome": "Missionários Servindo do Brasil", "icone": "🏙"}
+            ]
+        },
+        {
+            "pilar": "UNIR AS FAMÍLIAS POR TODA A ETERNIDADE",
+            "classe": "p-unir",
+            "topicos": [
+                {"nome": "Recomendações para o Templo - Membros com Investidura", "icone": "🏛️"},
+                {"nome": "Recomendações para o Templo - Membros sem Investidura", "icone": "📜"}
+            ]
+        }
+    ]
 
-# Rodapé
-st.markdown("<div class='footer-quote'>\"Eu plantei; Apolo regou; mas Deus deu o crescimento.\" (1 Coríntios 3:6)</div>", unsafe_allow_html=True)
+    # Cabeçalho da Tabela (Agrupado com a nova coluna FALTA)
+    col1, col2, col3, col4, col5 = st.columns([2.5, 5, 2, 2, 2])
+    with col1:
+        st.markdown("<div class='grid-header'>RESPONSABILIDADES</div>", unsafe_allow_html=True)
+    with col2:
+        st.markdown("<div class='grid-header'>INDICADOR / TÓPICO</div>", unsafe_allow_html=True)
+    with col3:
+        st.markdown("<div class='grid-header'>META</div>", unsafe_allow_html=True)
+    with col4:
+        st.markdown("<div class='grid-header'>ALCANÇADO</div>", unsafe_allow_html=True)
+    with col5:
+        st.markdown("<div class='grid-header'>FALTA</div>", unsafe_allow_html=True)
+        
+    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+    # Renderização dos Blocos
+    for grupo in grupos_responsabilidades:
+        col1, col2, col3, col4, col5 = st.columns([2.5, 5, 2, 2, 2])
+        
+        # Coluna 1: Responsabilidade (Mesclada visualmente)
+        with col1:
+            st.markdown(
+                f"<div class='pillar-box-merged {grupo['classe']}'>{grupo['pilar']}</div>", 
+                unsafe_allow_html=True
+            )
+            
+        # Colunas 2, 3, 4 e 5: Tópicos, Metas, Alcançados e Falta
+        with col2:
+            for t in grupo["topicos"]:
+                st.markdown(
+                    f"<div class='topic-row'>{t['icone']}&nbsp;&nbsp;{t['nome']}</div>", 
+                    unsafe_allow_html=True
+                )
+                
+        with col3:
+            for t in grupo["topicos"]:
+                dado_topico = df_filtrado[df_filtrado['TOPICO'].str.strip().str.lower() == t['nome'].strip().lower()]
+                val_meta = int(dado_topico['V. META'].values[0]) if not dado_topico.empty and pd.notna(dado_topico['V. META'].values[0]) else 0
+                st.markdown(f"<div class='val-box'>{val_meta}</div>", unsafe_allow_html=True)
+                
+        with col4:
+            for t in grupo["topicos"]:
+                dado_topico = df_filtrado[df_filtrado['TOPICO'].str.strip().str.lower() == t['nome'].strip().lower()]
+                val_alc = int(dado_topico['V. ALCANÇADO'].values[0]) if not dado_topico.empty and pd.notna(dado_topico['V. ALCANÇADO'].values[0]) else 0
+                st.markdown(f"<div class='val-box'>{val_alc}</div>", unsafe_allow_html=True)
+
+        with col5:
+            for t in grupo["topicos"]:
+                dado_topico = df_filtrado[df_filtrado['TOPICO'].str.strip().str.lower() == t['nome'].strip().lower()]
+                val_falta = int(dado_topico['FALTA'].values[0]) if not dado_topico.empty and pd.notna(dado_topico['FALTA'].values[0]) else 0
+                st.markdown(f"<div class='val-box-falta'>{val_falta}</div>", unsafe_allow_html=True)
+
+# Rodapé com citação
+st.markdown("<p class='footer-quote'>\"Eu plantei; Apolo regou; mas Deus deu o crescimento.\" (1 Coríntios 3:6)</p>", unsafe_allow_html=True)
