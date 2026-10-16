@@ -114,15 +114,17 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Função para carregar os dados do Excel
-@st.cache_data
+# Função para carregar os dados do Excel com expiração de cache (ttl=60)
+@st.cache_data(ttl=60)
 def carregar_dados():
     try:
-        # Lê todas as abas caso haja mais de um ano
         xls = pd.ExcelFile("DADOS.xlsx")
         dfs = []
         for sheet_name in xls.sheet_names:
-            dfs.append(pd.read_excel(xls, sheet_name=sheet_name))
+            temp_df = pd.read_excel(xls, sheet_name=sheet_name)
+            # Normaliza nomes de colunas (remove espaços e passa para maiúsculo)
+            temp_df.columns = temp_df.columns.astype(str).str.strip().str.upper()
+            dfs.append(temp_df)
         df = pd.concat(dfs, ignore_index=True)
         return df
     except Exception as e:
@@ -189,7 +191,7 @@ if not df.empty:
         }
     ]
 
-    # Cabeçalho da Tabela (Agrupado com a nova coluna FALTA)
+    # Cabeçalho da Tabela
     col1, col2, col3, col4, col5 = st.columns([2.5, 5, 2, 2, 2])
     with col1:
         st.markdown("<div class='grid-header'>RESPONSABILIDADES</div>", unsafe_allow_html=True)
@@ -208,14 +210,14 @@ if not df.empty:
     for grupo in grupos_responsabilidades:
         col1, col2, col3, col4, col5 = st.columns([2.5, 5, 2, 2, 2])
         
-        # Coluna 1: Responsabilidade (Mesclada visualmente)
+        # Coluna 1: Responsabilidade
         with col1:
             st.markdown(
                 f"<div class='pillar-box-merged {grupo['classe']}'>{grupo['pilar']}</div>", 
                 unsafe_allow_html=True
             )
             
-        # Colunas 2, 3, 4 e 5: Tópicos, Metas, Alcançados e Falta
+        # Coluna 2: Tópicos
         with col2:
             for t in grupo["topicos"]:
                 st.markdown(
@@ -223,23 +225,34 @@ if not df.empty:
                     unsafe_allow_html=True
                 )
                 
+        # Coluna 3: Meta
         with col3:
             for t in grupo["topicos"]:
-                dado_topico = df_filtrado[df_filtrado['TOPICO'].str.strip().str.lower() == t['nome'].strip().lower()]
-                val_meta = int(dado_topico['V. META'].values[0]) if not dado_topico.empty and pd.notna(dado_topico['V. META'].values[0]) else 0
+                dado_topico = df_filtrado[df_filtrado['TOPICO'].astype(str).str.strip().str.lower() == t['nome'].strip().lower()]
+                val_meta = int(dado_topico['V. META'].values[0]) if not dado_topico.empty and 'V. META' in dado_topico and pd.notna(dado_topico['V. META'].values[0]) else 0
                 st.markdown(f"<div class='val-box'>{val_meta}</div>", unsafe_allow_html=True)
                 
+        # Coluna 4: Alcançado
         with col4:
             for t in grupo["topicos"]:
-                dado_topico = df_filtrado[df_filtrado['TOPICO'].str.strip().str.lower() == t['nome'].strip().lower()]
-                val_alc = int(dado_topico['V. ALCANÇADO'].values[0]) if not dado_topico.empty and pd.notna(dado_topico['V. ALCANÇADO'].values[0]) else 0
+                dado_topico = df_filtrado[df_filtrado['TOPICO'].astype(str).str.strip().str.lower() == t['nome'].strip().lower()]
+                val_alc = int(dado_topico['V. ALCANÇADO'].values[0]) if not dado_topico.empty and 'V. ALCANÇADO' in dado_topico and pd.notna(dado_topico['V. ALCANÇADO'].values[0]) else 0
                 st.markdown(f"<div class='val-box'>{val_alc}</div>", unsafe_allow_html=True)
 
+        # Coluna 5: Falta (Leitura segura com cálculo de contingência)
         with col5:
             for t in grupo["topicos"]:
-                dado_topico = df_filtrado[df_filtrado['TOPICO'].str.strip().str.lower() == t['nome'].strip().lower()]
-                val_falta = int(dado_topico['FALTA'].values[0]) if not dado_topico.empty and pd.notna(dado_topico['FALTA'].values[0]) else 0
+                dado_topico = df_filtrado[df_filtrado['TOPICO'].astype(str).str.strip().str.lower() == t['nome'].strip().lower()]
+                
+                val_meta = int(dado_topico['V. META'].values[0]) if not dado_topico.empty and 'V. META' in dado_topico and pd.notna(dado_topico['V. META'].values[0]) else 0
+                val_alc = int(dado_topico['V. ALCANÇADO'].values[0]) if not dado_topico.empty and 'V. ALCANÇADO' in dado_topico and pd.notna(dado_topico['V. ALCANÇADO'].values[0]) else 0
+                
+                if not dado_topico.empty and 'FALTA' in dado_topico and pd.notna(dado_topico['FALTA'].values[0]):
+                    val_falta = int(dado_topico['FALTA'].values[0])
+                else:
+                    val_falta = val_meta - val_alc
+                    
                 st.markdown(f"<div class='val-box-falta'>{val_falta}</div>", unsafe_allow_html=True)
 
-# Rodapé com citação
+# Rodapé
 st.markdown("<p class='footer-quote'>\"Eu plantei; Apolo regou; mas Deus deu o crescimento.\" (1 Coríntios 3:6)</p>", unsafe_allow_html=True)
